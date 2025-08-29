@@ -94,6 +94,45 @@ def _parse_pocket_file(pocket_info):
         psize = pocket_sizes[pocket_num]
     return psize
 
+def _parse_pocket_file_exclude_std(pocket_info):
+    """Helper to parse pocket data file for a pocket volume."""
+    # unpack info
+    filename, exc_std = pocket_info
+    # open file and take value at position `pocket_num`
+    pocket_sizes = np.loadtxt(filename, dtype=int)
+    mean_pv = np.mean(pocket_sizes)
+    pv_std = np.std(pocket_sizes)
+
+    retained_pockets = np.where(pocket_sizes < (mean_pv + exc_std*pv_std))[0]
+
+    return np.sum(pocket_sizes[retained_pockets])
+
+class Exclude_n_std_pockets:
+    """Reports pocket volume of a particular pocket.
+    
+    Parameters
+    ----------
+    pocket_number : int, default=None,
+        Number of std above which to exclude pockets. If None, will exclude +1 STD pockets.
+    """
+
+    def __init__(self, pocket_number=1, n_cpus=1):
+        self.pocket_number = pocket_number
+        self.n_cpus = n_cpus
+
+
+    def parse_pockets(self, pockets_dir):
+        """Searches through output directory for pocket_size files and
+        parses them for pocket sizes of a given pocket num."""
+        pockets_dir = os.path.abspath(pockets_dir)
+        # get data file names
+        pocket_files = np.sort(glob.glob(pockets_dir + "/*/pocket_sizes.dat"))
+        # parallelize the parsing
+        file_info = list(zip(pocket_files, itertools.repeat(self.pocket_number)))
+        pool = Pool(processes=self.n_cpus)
+        pockets = pool.map(_parse_pocket_file_exclude_std, file_info)
+        pool.terminate()
+        return np.array(pockets)
 
 class TopPockets:
     """Reports pocket volume of a particular pocket.
