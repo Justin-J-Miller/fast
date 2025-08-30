@@ -62,7 +62,7 @@ class RMSDWrap(base_analysis):
         # determine atom indices
         self.atom_indices = atom_indices
         if type(atom_indices) is str:
-            self.atom_indices_vals = np.loadtxt(atom_indices, dtype=int)
+            self.atom_indices_vals = np.genfromtxt(atom_indices, dtype=int)
         else:
             self.atom_indices_vals = self.atom_indices
 
@@ -76,7 +76,7 @@ class RMSDWrap(base_analysis):
 
         self.ref_atom_indices = ref_atom_indices
         if type(ref_atom_indices) is str:
-            self.ref_atom_indices_vals = np.loadtxt(ref_atom_indices, dtype=int)
+            self.ref_atom_indices_vals = np.genfromtxt(ref_atom_indices, dtype=int)
         else:
             self.ref_atom_indices_vals = self.ref_atom_indices_vals            
 
@@ -109,20 +109,13 @@ class RMSDWrap(base_analysis):
         else:
             # load centers
             centers = md.load(
-                "./data/full_centers.xtc", top=self.base_struct_md,
-                atom_indices=self.atom_indices_vals)
-            # get subset if necessary
-            if self.atom_indices_vals is None:
-                struct_sub = self.base_struct_md
-            else:
-                struct_sub = self.base_struct_md.atom_slice(self.atom_indices_vals)
+                "./data/full_centers.xtc", top=self.base_struct_md)
             # calculate and save rmsds
             if self.ref_struct is None:
-                rmsds = md.rmsd(centers, struct_sub)
+                rmsds = md.rmsd(centers, struct_sub, atom_indices=self.atom_indices_vals)
             else:
-                rmsds = md.rmsd(centers, 
-                    self.ref_struct_md, 
-                    atom_indices=self.atom_indices_vals,
-                    ref_atom_indices=self.ref_atom_indices_vals)
+                rmsds = md.rmsd(centers, reference = self.ref_struct_md,
+                        atom_indices = self.atom_indices_vals,
+                        ref_atom_indices = self.ref_atom_indices_vals)
             np.save(self.output_name, rmsds)
         
